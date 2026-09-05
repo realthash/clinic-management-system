@@ -1,6 +1,7 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import { supabase } from './superbaseClient.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -13,6 +14,16 @@ app.use(express.json()); // replaces body-parser
 app.get('/api/v1', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Clinic API is running' });
 });
+
+app.get("/api/v1/hospitals", async (req, res) => {
+    const { data, error } = await supabase
+        .from("hospital")
+        .select("*");
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+});
+
 
 // Import & mount routes (e.g. app.use('/api/patients', patientRoutes))
 
