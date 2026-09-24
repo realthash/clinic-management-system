@@ -56,6 +56,8 @@ body::after {
     background: var(--bg-ambient-color-after);
 }
 
-.main-container {}
+.main-container {
+    
+}
 
 .desc-column {}
