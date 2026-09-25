@@ -13,42 +13,53 @@ datasource db {
 }
 
 model Hospital {
-  id          String       @id @default(uuid()) @db.Uuid
-  name        String
-  address     String
-  createdAt   DateTime     @default(now()) @map("created_at")
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String
+  address   String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
   departments Department[]
   staffs      Staff[]
 
+  @@index([deletedAt])
   @@map("hospital")
 }
 
 model Department {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String    @id @default(uuid()) @db.Uuid
   name       String
-  hospitalId String   @map("hospital_id") @db.Uuid
-  createdAt  DateTime @default(now()) @map("created_at")
+  hospitalId String    @map("hospital_id") @db.Uuid
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
 
   //RELATIONSHIPS
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
   staffs   Staff[]
   clinics  Clinic[]
 
+  //avoid department name duplication  in a single hospital
   @@unique([hospitalId, name])
   @@index([hospitalId])
+  @@index([deletedAt])
   @@map("department")
 }
 
 model Staff {
-  id           String   @id @default(uuid()) @db.Uuid
+  id           String    @id @default(uuid()) @db.Uuid
   name         String
-  email        String   @unique
+  email        String    @unique
   password     String
   role         Role
-  staffId      String   @unique @map("staff_id")
-  hospitalId   String   @map("hospital_id")
-  departmentId String?  @map("department_id") @db.Uuid
-  createdAt    DateTime @default(now()) @map("created_at")
+  isActive     Boolean   @default(true) @map("is_active")
+  deletedAt    DateTime? @map("deleted_at")
+  staffId      String    @unique @map("staff_id")
+  hospitalId   String    @map("hospital_id") @db.Uuid
+  departmentId String?   @map("department_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   //RELATIONSHIPS
   hospital   Hospital    @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
@@ -57,6 +68,7 @@ model Staff {
   sessions Session[]
 
   @@index([hospitalId])
+  @@index([deletedAt])
   @@map("staff")
 }
 
@@ -67,18 +79,23 @@ enum Role {
 }
 
 model Clinic {
-  id           String  @id @default(uuid()) @db.Uuid
-  departmentId String  @map("department_id") @db.Uuid
+  id           String    @id @default(uuid()) @db.Uuid
+  departmentId String    @map("department_id") @db.Uuid
   name         String
   category     String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
 
   //RELATIONSHIPS
   department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
 
   sessions Session[]
 
+  //avoid clinic name duplication  in a single department
   @@unique([departmentId, name])
   @@index([departmentId])
+  @@index([deletedAt])
   @@map("clinic")
 }
 
@@ -119,6 +136,8 @@ model SessionPatient {
   status      ActiveStatus @default(SCHEDULED)
   tokenNumber Int?         @map("token_number")
   assignedBy  String?      @map("assigned_by") @db.Uuid
+  checkedInAt DateTime?    @map("checked_in_at")
+  completedAt DateTime?    @map("completed_at")
   sessionId   String       @map("session_id") @db.Uuid
   patientId   String       @map("patient_id") @db.Uuid
   createdAt   DateTime     @default(now()) @map("created_at")
@@ -128,8 +147,9 @@ model SessionPatient {
   session Session @relation(fields: [sessionId], references: [id], onDelete: Restrict)
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
 
-  //find session id alongside patient id
+  // Avoid duplicate bookings, ensures a patient cannot be booked more than once in the same session
   @@unique([sessionId, patientId])
+  // Ensure token numbers are unique within a session
   @@unique([sessionId, tokenNumber])
   //find only patientId 
   @@index([patientId])
@@ -157,6 +177,7 @@ model Patient {
   email     String?  @unique
   password  String
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   sessionPatients SessionPatient[]
 
