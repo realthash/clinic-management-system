@@ -12,25 +12,153 @@ datasource db {
   provider = "postgresql"
 }
 
-model hospital {
-  id      String @id @default(uuid())
-  name    String
-  address String
+model Hospital {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String
+  address     String
+  createdAt   DateTime     @default(now()) @map("created_at")
+  departments Department[]
+  staffs      Staff[]
+
+  @@map("hospital")
 }
 
-model staff {
-  id       String @id @default(uuid())
-  name     String
-  staff_id String
+model Department {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  hospitalId String   @map("hospital_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  //RELATIONSHIPS
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  staffs   Staff[]
+  clinics  Clinic[]
+
+  @@unique([hospitalId, name])
+  @@index([hospitalId])
+  @@map("department")
 }
 
-model department {
-  id   String @id @default(uuid())
-  name String
+model Staff {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  email        String   @unique
+  password     String
+  role         Role
+  staffId      String   @unique @map("staff_id")
+  hospitalId   String   @map("hospital_id")
+  departmentId String?  @map("department_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  //RELATIONSHIPS
+  hospital   Hospital    @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  department Department? @relation(fields: [departmentId], references: [id])
+
+  sessions Session[]
+
+  @@index([hospitalId])
+  @@map("staff")
 }
 
-model session {
-  id       String   @id @default(uuid())
-  location String
-  date     DateTime
+enum Role {
+  DOCTOR
+  NURSE
+  HOSPITAL_ADMIN
+}
+
+model Clinic {
+  id           String  @id @default(uuid()) @db.Uuid
+  departmentId String  @map("department_id") @db.Uuid
+  name         String
+  category     String?
+
+  //RELATIONSHIPS
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+
+  sessions Session[]
+
+  @@unique([departmentId, name])
+  @@index([departmentId])
+  @@map("clinic")
+}
+
+model Session {
+  id              String        @id @default(uuid()) @db.Uuid
+  clinicId        String        @map("clinic_id") @db.Uuid
+  sessionName     String        @map("session_name")
+  sessionStatus   SessionStatus @default(SCHEDULED) @map("session_status")
+  startsAt        DateTime      @map("starts_at")
+  endsAt          DateTime?     @map("ends_at")
+  sessionCapacity Int           @map("session_capacity")
+  venue           String?
+  description     String?
+  createdBy       String        @map("created_by") @db.Uuid
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  //RELATIONSHIPS
+  clinic  Clinic @relation(fields: [clinicId], references: [id], onDelete: Restrict)
+  creator Staff  @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+
+  sessionPatients SessionPatient[]
+
+  @@index([createdBy])
+  @@index([startsAt])
+  @@map("session")
+}
+
+enum SessionStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+model SessionPatient {
+  id          String       @id @default(uuid()) @db.Uuid
+  bookingType BookingType  @default(SELF_BOOKED) @map("booking_type")
+  status      ActiveStatus @default(SCHEDULED)
+  tokenNumber Int?         @map("token_number")
+  assignedBy  String?      @map("assigned_by") @db.Uuid
+  sessionId   String       @map("session_id") @db.Uuid
+  patientId   String       @map("patient_id") @db.Uuid
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  //RELATIONSHIPS
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+
+  //find session id alongside patient id
+  @@unique([sessionId, patientId])
+  @@unique([sessionId, tokenNumber])
+  //find only patientId 
+  @@index([patientId])
+  @@map("session_patient")
+}
+
+enum BookingType {
+  ASSIGNED
+  SELF_BOOKED
+}
+
+enum ActiveStatus {
+  SCHEDULED
+  CHECKED_IN
+  NO_SHOW
+  COMPLETED
+  CANCELLED
+}
+
+model Patient {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  nic       String
+  phone     String
+  email     String?  @unique
+  password  String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  sessionPatients SessionPatient[]
+
+  @@map("patient")
 }
