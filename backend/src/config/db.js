@@ -1,8 +1,7 @@
 import { PrismaClient } from "../generated/prisma/client.ts";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-import chalk from 'chalk'
-
+import chalk from 'chalk';
 
 const connectionString = process.env.DATABASE_URL;
 
