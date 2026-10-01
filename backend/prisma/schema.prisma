@@ -172,7 +172,7 @@ enum ActiveStatus {
 model Patient {
   id        String   @id @default(uuid()) @db.Uuid
   name      String
-  nic       String
+  nic       String   @unique
   phone     String
   email     String?  @unique
   password  String
